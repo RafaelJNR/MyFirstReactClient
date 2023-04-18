@@ -9,6 +9,7 @@ function User() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState('');
+  const [userRol, setUserRol] = useState()
 
   const { state } = useLocation();          //CON ESTA FUNCION ALMACENAMOS EL USER EN STATE PARA LUEGO ALMACENARLO EN USER
   let user = state;
@@ -35,6 +36,24 @@ function User() {
         console.log(err.message);
       });
   }
+
+  const adminUsers = async () => {
+    await fetch('http://localhost:8080/api/userdata/getall')
+      .then((response) => { return response.json() })
+      .then((data) => {
+        console.log(data);
+        setUserRol(data ? data.find((element) => {
+          if(data.username===element.username){
+            return element.rol
+          }
+          console.log(userRol)
+      }) : null)
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
+  }
+
 
   //añadir usuario
 
@@ -143,7 +162,11 @@ function User() {
   useEffect(() => {
     //  addEventListener("Clipboard", (evenet)=>console.log(evenet))...
     listUsers();
+    if(user===null){
+      navigate("/");
+    }
     console.log(user)
+
   }, [])
 
   return (
@@ -168,8 +191,8 @@ function User() {
           <p>
             <label>
               Rol:         </label>
-            <label type="text" className="form-control" >Choose a Rol:         </label>
-            <select name="form-control" id="rols" onChange={(e) => setRol(e.target.value)}>
+          <select name="form-control" id="rols" onChange={(e) => setRol(e.target.value)}>
+              <option >CHOOSE A ROL</option>
               <option value="ADMIN">ADMIN</option>
               <option value="USER">USER</option>
           </select>

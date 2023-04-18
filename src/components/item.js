@@ -8,11 +8,7 @@ function Item() {
     const [suppliers, setSuppliers] = useState([]);
     const [items, setItems] = useState([]);
     const [itemCode, setItemCode] = useState([]);
-    const [itemDescription, setItemDescription] = useState([]);
-    const [itemPrice, setItemPrice] = useState([]);
-    const [itemUsername, setItemUsername] = useState([]);
-    const [itemState, setItemState] = useState([]);
-
+    const [rol, setRol] = useState();
 
 
     const { state } = useLocation();          //CON ESTA FUNCION ALMACENAMOS EL USER EN STATE PARA LUEGO ALMACENARLO EN USER
@@ -22,7 +18,7 @@ function Item() {
 
     const routeChange = () => {
         sessionStorage.setItem('user', user)
-        routeChangeUser(user);
+        routeChangeUser(user, itemCode);
     }
     const navigate = useNavigate();
     const routeChangeUser = (user) => {
@@ -43,7 +39,6 @@ function Item() {
 
     // FUNCIÓN PARA CAMBIAR A LA PÁGINA DE AÑADIR ITEM
     const routeChangeUpdate = () => {
-        sessionStorage.setItem('user', user)
         routeChangeUpdateItem(user);
     }
   
@@ -68,6 +63,22 @@ function Item() {
 
     }
 
+    let seeRolData = { username: user }
+    let seeRolUrl = new URL('http://localhost:8080/api/userdata')
+    for (let k in seeRolData) { seeRolUrl.searchParams.append(k, seeRolData[k]) }
+    const seeRol = async()=>{
+
+    await fetch(seeRolUrl).then((response) => { return response.json() })
+    .then((data) => {
+        console.log(data.rol);
+        setRol(data.rol);
+    })
+    .catch((err) => {
+        console.log(err.message);
+    });
+
+    }
+
         //FUNCION PARA LISTAR LOS ITEMS
 
     const listItems = async () => {
@@ -82,6 +93,38 @@ function Item() {
                 console.log(err.message);
             });
 
+    }
+
+    const listActivateItems = async () => {
+
+        await fetch('http://localhost:8080/api/itemdata/getall')
+            .then((response) => { return response.json() })
+            .then((data) => {
+                console.log(data);
+                setItems(data ? data.filter((element) => {
+                    return element.state === "ACTIVE";
+                }) : null)
+                console.log(items)
+            })
+            .catch((err) => {
+                console.log(err.message);
+            });
+    }
+
+    const listDiscontinuedItems = async () => {
+
+        await fetch('http://localhost:8080/api/itemdata/getall')
+            .then((response) => { return response.json() })
+            .then((data) => {
+                console.log(data);
+                setItems(data ? data.filter((element) => {
+                    return element.state === "DISCONTINUED";
+                }) : null)
+                console.log(items)
+            })
+            .catch((err) => {
+                console.log(err.message);
+            });
     }
 
         //FUNCION PARA BORRAR LOS ITEMS POR EL CODE
@@ -108,10 +151,13 @@ function Item() {
         }
     };
 
-
     useEffect(() => {
         //  addEventListener("Clipboard", (evenet)=>console.log(evenet))...
         listItems();
+        if(user===null){
+        navigate("/");
+        }
+        seeRol()
         console.log(user)
     }, [])
 
@@ -120,23 +166,23 @@ function Item() {
         <div className="App">
             <header className="App-header">
                 <div>
-                    <button onClick={routeChange}>USERS</button>
+                    {rol==="ADMIN"?(<button onClick={routeChange}>USERS</button>):null}
                 </div>
                 <form>
-                    <p>
-                        <label>Item Code:    </label>
-                        <input id="code" type="text" className="form-control-itemcode" onChange={(e) => setItemCode(e.target.value)} />
-                    </p>
                     <div>
                         <button onClick={routeChangeCreate}>ADD ITEM</button>
                         <button onClick={deleteItem}>DELETE ITEM</button>
-                        <button onClick={routeChangeUpdate}>UPDATE ITEM</button>
+                        <button onClick={routeChangeUpdate}>VIEW ITEM´S DETAILS</button>
                         
                     </div>
                 </form>
 
                 <div className="items">
                     <p>ITEMS LIST</p>
+                    <button onClick={listItems}>SEE ALL ITEMS</button>
+                    <button onClick={listActivateItems}>SEE ACTIVE ITEMS</button>
+                    <button onClick={listDiscontinuedItems}>SEE DISCONTINUED ITEMS</button>
+
                     <div className="items-table" >
                         <table summary="ITEMS LIST">
                             <tbody>

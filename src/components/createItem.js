@@ -74,6 +74,9 @@ function CreateItem() {
     useEffect(() => {
         //  addEventListener("Clipboard", (evenet)=>console.log(evenet))...
         console.log(user)
+        if(user===null){
+            navigate("/");
+            }
     }, [])
 
     return (

@@ -7,22 +7,19 @@ import { useNavigate } from "react-router-dom";
 function UpdateItem() {
     const [suppliers, setSuppliers] = useState([]);
     const [items, setItems] = useState([]);
-    const [itemCode, setItemCode] = useState([]);
-    const [itemDescription, setItemDescription] = useState([]);
-    const [itemPrice, setItemPrice] = useState([]);
-    const [reducedPrice, setReducedPrice] = useState([]);
-    const [startDate, setStartDate] = useState([]);
-    const [endDate, setEndDate] = useState([]);
-    const [supplierName, setSupplierName] = useState([]);
-    const [supplierCountry, setSupplierCountry] = useState([]);
+    const [itemCode, setItemCode] = useState();
+    const [itemDescription, setItemDescription] = useState();
+    const [itemPrice, setItemPrice] = useState();
+    const [reducedPrice, setReducedPrice] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [supplierName, setSupplierName] = useState('');
+    const [supplierCountry, setSupplierCountry] = useState('');
     const [foundItem, setFoundItem] = useState({});
-
-
-
+    const [reason, setReason] = useState({});
 
     const { state } = useLocation();          //CON ESTA FUNCION ALMACENAMOS EL USER EN STATE PARA LUEGO ALMACENARLO EN USER
     let user = state;
-
 
     //FUNCION PARA NAVEGAR A ITEMS
     const routeChange = () => {
@@ -39,14 +36,33 @@ function UpdateItem() {
 
     const listItems = async () => {
 
-        await fetch('http://localhost:8080/api/itemdata/getall')
+        await fetch('http://localhost:8080/api/itemdata/')
             .then((response) => { return response.json() })
             .then((data) => {
 
                 setItems(data);
                 setFoundItem(data ? data.find((element) => {
-                    return element.code === 'ch1';
+                    return element.code === "ch1";
                 }) : null)
+                console.log(foundItem)
+                console.log(foundItem.priceReductions)
+
+            })
+            .catch((err) => {
+                console.log(err.message);
+            });
+    }
+
+    let searchItemData = { code: itemCode }
+    let deleteItemUrl = new URL('http://localhost:8080/api/itemdata')
+    for (let k in searchItemData) { deleteItemUrl.searchParams.append(k, searchItemData[k]) }
+    const listItem = async (e) => {
+        e.preventDefault();
+        await fetch(deleteItemUrl)
+            .then((response) => { return response.json() })
+            .then((data) => {
+
+                setFoundItem(data);
                 console.log(foundItem)
                 console.log(foundItem.priceReductions)
 
@@ -72,40 +88,84 @@ function UpdateItem() {
 
     }
 
-    //FUNCION PARA LISTAR LOS ITEMS
+    //FUNCION PARA ACTUALIZAR LOS ITEMS
 
-    const updateItem =  (e) => {
-            e.preventDefault();
+    const body = {
+        code: foundItem.code,
+        description: itemDescription??foundItem.description,
+        price: itemPrice??foundItem.price,
+        state: "ACTIVE",
+        priceReductions: [{
+            reducedPrice: reducedPrice,
+            startDate: startDate,
+            endDate: endDate
+        }],
+        suppliersData: [{
+            name: supplierName,
+            country: supplierCountry
+        }]
+    }
+    console.log(body)
+
+    const updateItem = (e) => {
+        e.preventDefault();
+
+        if(foundItem.state==="ACTIVE"){
             fetch('http://localhost:8080/api/itemdata', {
-                method: 'PUT',
-                body: JSON.stringify({
-                    code: foundItem.code,
-                    description: itemDescription,
-                    price: itemPrice,
-                    state: "ACTIVE",
-                    priceReductions: [{
-                        reducedPrice:reducedPrice,
-                        startDate: startDate,
-                        endDate: endDate
-                    }],
-                    suppliersData: [{
-                        name: supplierName,
-                        country: supplierCountry
-                    }]
-                }),
-                headers: {
-                    'Accept': 'application/json, text/plain, */*',
-                    'Content-Type': 'application/json; charset=UTF-8',
-                    }
-            }).then(() => routeChange())
-                .catch((err) => { console.log(err.message); });
+            method: 'PUT',
+            body: JSON.stringify(body),
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json; charset=UTF-8',
+            }
+        }).then(() => routeChange())
+            .catch((err) => { console.log(err.message); });
+
+
+        }else{
+            alert("Only active items can be updated.")
+        }
+
         
+    };
+
+    //FUNCION PARA DESACTIVAR LOS ITEMS
+
+    const desactivateBody = {
+        itemDto:
+        {
+            code: itemCode
+        },
+        username: user,
+        reason: reason,
+        observation: "Este es un dato inservible que nunca vamos a usar"
+    }
+    console.log(desactivateBody)
+    const desactivateItem = async (e) => {
+        e.preventDefault();
+        await fetch("http://localhost:8080/api/itemdata/discontinue", {
+            method: 'PUT',
+            body: JSON.stringify(desactivateBody),
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json; charset=UTF-8',
+            }
+        }).then((response) => {
+            if (response.status === 201) {
+                listItem(e);
+                alert("Item " + itemCode + " have been discontinued.")
+            } else {
+                alert("Item " + itemCode + " not found.")
+            }
+        });
     };
 
     useEffect(() => {
         //  addEventListener("Clipboard", (evenet)=>console.log(evenet))...
         console.log(user)
-        listItems()
+        if(user===null){
+            navigate("/");
+        }
         //console.log(foundItem.code)
     }, [])
 
@@ -120,8 +180,10 @@ function UpdateItem() {
                 </div>
                 <form>
                     <div className="items">
-                        <p>UPDATE ITEM {foundItem.code}</p>
-
+                        <p>UPDATE ITEM</p>
+                        <label>Item Code:         </label>
+                        <input type="text" className="form-control-description" onChange={(e) => setItemCode(e.target.value)} />
+                        <button onClick={listItem}>Search Item</button>
                     </div>
                     <p>
                         <label>Description:         </label>
@@ -155,7 +217,15 @@ function UpdateItem() {
                         </p>
                     </div>
                     <div>
-
+                        <label>REASON:         </label>
+                        <select name="form-control" id="reasons" onChange={(e) => setReason(e.target.value)}>
+                            <option >SELECT REASON</option>
+                            <option value="DEFECTIVED">DEFECTIVED</option>
+                            <option value="UNAVAILABLE">UNAVAILABLE</option>
+                            <option value="UNEVEN">UNEVEN</option>
+                            <option value="UNPROVIDED">UNPROVIDED</option>
+                        </select>
+                        <button onClick={desactivateItem}>DISCONTINUE ITEM</button>
                         <button onClick={updateItem}>UPDATE ITEM</button>
                         <button onClick={routeChange}>CANCEL</button>
                     </div>
@@ -186,10 +256,10 @@ function UpdateItem() {
                                     <th>SUPPLIER NAME</th>
                                     <th>SUPPLIER COUNTRY</th>
                                 </tr>
-                                {foundItem&&foundItem.suppliersData?.map((foundSupplierData, index) => {
+                                {foundItem && foundItem.suppliersData?.map((foundSupplierData, index) => {
                                     return (
                                         <tr key={index}>
-                                            <td>{foundSupplierData ? foundSupplierData.name: null}</td>
+                                            <td>{foundSupplierData ? foundSupplierData.name : null}</td>
                                             <td>{foundSupplierData ? foundSupplierData.country : null}</td>
 
                                         </tr>
@@ -201,7 +271,7 @@ function UpdateItem() {
                                     <th>START DATE</th>
                                     <th>END DATE</th>
                                 </tr>
-                                {foundItem&&foundItem.priceReductions?.map((foundPriceReduction, index) => {
+                                {foundItem && foundItem.priceReductions?.map((foundPriceReduction, index) => {
                                     return (
                                         <tr key={index}>
                                             <td>{foundPriceReduction ? foundPriceReduction.reducedPrice : null}</td>
